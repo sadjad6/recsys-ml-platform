@@ -143,3 +143,12 @@ async def add_metric(experiment_id: str, metric: MetricEvent, db: AsyncSession =
         
     await record_metric(db, experiment_id, metric.group, metric.metric_name, metric.value)
     return {"status": "success"}
+
+@router.get("/assign-group", response_model=AssignGroupResponse)
+async def assign_group_alias(
+    user_id: str = Query(...),
+    experiment_id: str = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Alias for /assign to match Spec.md endpoint contract."""
+    return await assign_group(user_id=user_id, experiment_id=experiment_id, db=db)

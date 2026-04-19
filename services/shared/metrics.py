@@ -21,6 +21,12 @@ REQUEST_LATENCY = Histogram(
     ["method", "endpoint", "service"]
 )
 
+ERROR_COUNT = Counter(
+    "http_errors_total",
+    "Total HTTP Error Responses (4xx and 5xx)",
+    ["method", "endpoint", "error_type", "service"]
+)
+
 class PrometheusMiddleware(BaseHTTPMiddleware):
     """Middleware to automatically track request counts and latency."""
     def __init__(self, app, service_name: str):
@@ -54,6 +60,16 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
                 endpoint=request.url.path,
                 service=self.service_name
             ).observe(latency)
+
+            # Track errors separately for alerting
+            if status_code >= 400:
+                error_type = "client_error" if status_code < 500 else "server_error"
+                ERROR_COUNT.labels(
+                    method=request.method,
+                    endpoint=request.url.path,
+                    error_type=error_type,
+                    service=self.service_name
+                ).inc()
             
         return response
 

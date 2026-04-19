@@ -78,4 +78,20 @@ register_model = PythonOperator(
     dag=dag,
 )
 
-check_training_data >> train_als_model >> train_ranking_model >> run_drift_detection >> register_model
+def _notify_model_service():
+    """Signal the Model Service to reload the latest registered model."""
+    import requests
+    try:
+        # In production, this would call a reload endpoint on the Model Service
+        response = requests.post("http://model-service:8004/reload", timeout=5)
+        print(f"Model Service reload response: {response.status_code}")
+    except Exception as e:
+        print(f"Model Service notification failed (non-blocking): {e}")
+
+deploy_model = PythonOperator(
+    task_id='deploy_model',
+    python_callable=_notify_model_service,
+    dag=dag,
+)
+
+check_training_data >> train_als_model >> train_ranking_model >> run_drift_detection >> register_model >> deploy_model

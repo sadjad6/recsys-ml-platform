@@ -26,3 +26,13 @@ async def predict(request: PredictRequest):
         inference_time_ms=total_ms,
         stages=timings
     )
+
+
+@router.post("/reload")
+async def reload_models():
+    """Reload production models from MLflow registry. Called by Airflow deploy task."""
+    try:
+        model_loader.load_production_models()
+        return {"status": "reloaded", "versions": model_loader.get_loaded_versions()}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
