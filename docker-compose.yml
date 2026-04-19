@@ -377,6 +377,24 @@ services:
     restart: unless-stopped
 
   # =============================================================================
+  # Frontend Streamlit App
+  # =============================================================================
+  streamlit:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: recsys-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - API_GATEWAY_URL=http://api-gateway:8000
+    depends_on:
+      - api-gateway
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # =============================================================================
   # Monitoring Stack
   # =============================================================================
   prometheus:
