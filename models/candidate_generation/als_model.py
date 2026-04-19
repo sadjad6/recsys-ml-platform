@@ -6,11 +6,16 @@ implicit feedback and generate user/item embeddings and candidates.
 """
 
 import os
+import mlflow
 from pyspark.sql import SparkSession
 from pyspark.ml.recommendation import ALS
 from pyspark.ml.evaluation import RegressionEvaluator
 
 MODELS_DIR = "/app/models/candidate_generation"
+
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+mlflow.set_tracking_uri(MLFLOW_URI)
+mlflow.set_experiment("candidate-generation")
 
 class ALSCandidateGenerator:
     def __init__(self, spark: SparkSession):
@@ -35,31 +40,43 @@ class ALSCandidateGenerator:
         item_indexer_model = item_indexer.fit(df)
         df = item_indexer_model.transform(df)
 
-        als = ALS(
-            rank=64,
-            maxIter=15,
-            regParam=0.1,
-            implicitPrefs=True,
-            userCol="user_index",
-            itemCol="item_index",
-            ratingCol="label", # binary label from prepare_training_data
-            coldStartStrategy="drop"
-        )
-        
-        print("Training ALS model...")
-        self.model = als.fit(df)
-        
-        # Save models and indexers
-        os.makedirs(MODELS_DIR, exist_ok=True)
-        self.model.write().overwrite().save(f"{MODELS_DIR}/als_model")
-        user_indexer_model.write().overwrite().save(f"{MODELS_DIR}/user_indexer")
-        item_indexer_model.write().overwrite().save(f"{MODELS_DIR}/item_indexer")
-        
-        # Save embeddings
-        self.model.userFactors.write.mode("overwrite").parquet(f"{MODELS_DIR}/embeddings/user_factors")
-        self.model.itemFactors.write.mode("overwrite").parquet(f"{MODELS_DIR}/embeddings/item_factors")
-        print("ALS training complete and artifacts saved.")
-        
+        with mlflow.start_run() as run:
+            als = ALS(
+                rank=64,
+                maxIter=15,
+                regParam=0.1,
+                implicitPrefs=True,
+                userCol="user_index",
+                itemCol="item_index",
+                ratingCol="label", # binary label from prepare_training_data
+                coldStartStrategy="drop"
+            )
+            
+            mlflow.log_params({
+                "rank": als.getRank(),
+                "maxIter": als.getMaxIter(),
+                "regParam": als.getRegParam(),
+                "implicitPrefs": als.getImplicitPrefs(),
+            })
+            
+            print("Training ALS model...")
+            self.model = als.fit(df)
+            
+            # Log the model to MLflow
+            import mlflow.spark
+            mlflow.spark.log_model(self.model, "als_model")
+            
+            # Save models and indexers locally
+            os.makedirs(MODELS_DIR, exist_ok=True)
+            self.model.write().overwrite().save(f"{MODELS_DIR}/als_model")
+            user_indexer_model.write().overwrite().save(f"{MODELS_DIR}/user_indexer")
+            item_indexer_model.write().overwrite().save(f"{MODELS_DIR}/item_indexer")
+            
+            # Save embeddings locally
+            self.model.userFactors.write.mode("overwrite").parquet(f"{MODELS_DIR}/embeddings/user_factors")
+            self.model.itemFactors.write.mode("overwrite").parquet(f"{MODELS_DIR}/embeddings/item_factors")
+            print("ALS training complete and artifacts saved.")
+            
         return self.model
 
 if __name__ == "__main__":

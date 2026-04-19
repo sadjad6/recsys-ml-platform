@@ -10,10 +10,16 @@ import json
 import joblib
 import pandas as pd
 import lightgbm as lgb
+import mlflow
+import mlflow.lightgbm
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import roc_auc_score
 
 MODELS_DIR = "/app/models/ranking"
+
+MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+mlflow.set_tracking_uri(MLFLOW_URI)
+mlflow.set_experiment("ranking-model")
 
 class RankingModel:
     def __init__(self):
@@ -41,50 +47,64 @@ class RankingModel:
         
         X, y = self.prepare_data(df)
         
-        # 5-fold cross validation
-        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-        oof_preds = pd.Series(0, index=X.index)
-        
-        models = []
-        for fold, (train_idx, val_idx) in enumerate(cv.split(X, y)):
-            X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
-            X_val, y_val = X.iloc[val_idx], y.iloc[val_idx]
+        with mlflow.start_run() as run:
+            # 5-fold cross validation
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+            oof_preds = pd.Series(0, index=X.index)
             
-            model = lgb.LGBMClassifier(
-                n_estimators=100,
-                learning_rate=0.1,
-                max_depth=5,
-                random_state=42
-            )
+            models = []
+            for fold, (train_idx, val_idx) in enumerate(cv.split(X, y)):
+                X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
+                X_val, y_val = X.iloc[val_idx], y.iloc[val_idx]
+                
+                model = lgb.LGBMClassifier(
+                    n_estimators=100,
+                    learning_rate=0.1,
+                    max_depth=5,
+                    random_state=42
+                )
+                
+                model.fit(
+                    X_train, y_train,
+                    eval_set=[(X_val, y_val)],
+                    eval_metric="auc"
+                )
+                
+                models.append(model)
+                oof_preds.iloc[val_idx] = model.predict_proba(X_val)[:, 1]
+                
+                fold_auc = roc_auc_score(y_val, oof_preds.iloc[val_idx])
+                print(f"Fold {fold} AUC: {fold_auc:.4f}")
+                
+            overall_auc = roc_auc_score(y, oof_preds)
+            print(f"Overall OOF AUC: {overall_auc:.4f}")
             
-            model.fit(
-                X_train, y_train,
-                eval_set=[(X_val, y_val)],
-                eval_metric="auc"
-            )
+            # Train final model on all data
+            self.model = lgb.LGBMClassifier(n_estimators=100, learning_rate=0.1, max_depth=5, random_state=42)
             
-            models.append(model)
-            oof_preds.iloc[val_idx] = model.predict_proba(X_val)[:, 1]
+            mlflow.log_params({
+                "n_estimators": 100,
+                "learning_rate": 0.1,
+                "max_depth": 5,
+                "random_state": 42
+            })
             
-            fold_auc = roc_auc_score(y_val, oof_preds.iloc[val_idx])
-            print(f"Fold {fold} AUC: {fold_auc:.4f}")
+            self.model.fit(X, y)
             
-        overall_auc = roc_auc_score(y, oof_preds)
-        print(f"Overall OOF AUC: {overall_auc:.4f}")
-        
-        # Train final model on all data
-        self.model = lgb.LGBMClassifier(n_estimators=100, learning_rate=0.1, max_depth=5, random_state=42)
-        self.model.fit(X, y)
-        
-        # Save model and feature importance
-        os.makedirs(MODELS_DIR, exist_ok=True)
-        joblib.dump(self.model, f"{MODELS_DIR}/ranking_model.joblib")
-        
-        importance = dict(zip(self.features, self.model.feature_importances_.tolist()))
-        with open(f"{MODELS_DIR}/feature_importance.json", "w") as f:
-            json.dump(importance, f, indent=4)
+            mlflow.log_metric("overall_auc", overall_auc)
+            mlflow.lightgbm.log_model(self.model, "ranking_model")
             
-        print("Ranking model training complete and saved.")
+            # Save model and feature importance locally
+            os.makedirs(MODELS_DIR, exist_ok=True)
+            joblib.dump(self.model, f"{MODELS_DIR}/ranking_model.joblib")
+            
+            importance = dict(zip(self.features, self.model.feature_importances_.tolist()))
+            with open(f"{MODELS_DIR}/feature_importance.json", "w") as f:
+                json.dump(importance, f, indent=4)
+                
+            mlflow.log_artifact(f"{MODELS_DIR}/feature_importance.json", "feature_importance")
+            
+            print("Ranking model training complete and saved.")
         return self.model
 
 if __name__ == "__main__":

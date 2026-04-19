@@ -227,6 +227,26 @@ services:
     command: airflow scheduler
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # MLflow
+  # ---------------------------------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    container_name: recsys-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql+psycopg2://airflow:airflow_password@postgres:5432/airflow
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow-artifacts:/mlflow/artifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
 # =============================================================================
 # Volumes
 # =============================================================================
