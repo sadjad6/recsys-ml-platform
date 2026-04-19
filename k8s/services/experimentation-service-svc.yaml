@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: experimentation-service
+  namespace: recsys
+spec:
+  type: ClusterIP
+  selector:
+    app: experimentation-service
+  ports:
+    - port: 8005
+      targetPort: 8005
