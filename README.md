@@ -1,5 +1,7 @@
 # Production-Grade Real-Time Recommendation System
 
+![RecSys ML Platform Banner](docs/images/hero_banner.png)
+
 A production-ready, highly scalable, and observable recommendation platform demonstrating a complete ML lifecycle. Built with a microservices architecture, real-time streaming pipelines, and Kubernetes deployment.
 
 ## 🏗️ Architecture Diagram
