@@ -255,6 +255,8 @@ services:
     container_name: recsys-redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
     networks:
       - recsys-network
     restart: unless-stopped
@@ -316,6 +318,46 @@ services:
       - recsys-network
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Model Service
+  # ---------------------------------------------------------------------------
+  model-service:
+    build:
+      context: .
+      dockerfile: services/model-service/Dockerfile
+    container_name: recsys-model-service
+    ports:
+      - "8004:8004"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    depends_on:
+      - mlflow
+      - postgres
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Recommendation Service
+  # ---------------------------------------------------------------------------
+  recommendation-service:
+    build:
+      context: .
+      dockerfile: services/recommendation-service/Dockerfile
+    container_name: recsys-recommendation-service
+    ports:
+      - "8003:8003"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - MODEL_SERVICE_URL=http://model-service:8004
+      - EXPERIMENTATION_SERVICE_URL=http://experimentation-service:8005
+    depends_on:
+      - model-service
+      - redis
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
 # =============================================================================
 # Volumes
 # =============================================================================
@@ -327,6 +369,10 @@ volumes:
   kafka-data:
     driver: local
   postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  mlflow-artifacts:
     driver: local
 
 # =============================================================================

@@ -54,6 +54,29 @@ async def list_users(
     result = await db.execute(select(User).offset(skip).limit(limit))
     return result.scalars().all()
 
+@router.get("/{user_id}/history")
+async def get_user_history(
+    user_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get interaction history for a user."""
+    # Verify user exists
+    result = await db.execute(select(User).where(User.user_id == user_id))
+    user = result.scalars().first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Interaction history is served from the Feature Store / Event pipeline.
+    # This endpoint returns a structured stub until wired to the data layer.
+    return {
+        "user_id": user_id,
+        "interactions": [],
+        "total": 0,
+        "limit": limit
+    }
+
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(user_id: str, user_update: UserUpdate, db: AsyncSession = Depends(get_db)):
     """Update user preferences."""

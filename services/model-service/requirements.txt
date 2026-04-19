@@ -1,0 +1,6 @@
+fastapi==0.103.1
+uvicorn[standard]==0.23.2
+pydantic==2.4.2
+pydantic-settings==2.0.3
+mlflow==2.16.0
+prometheus-client==0.17.1
