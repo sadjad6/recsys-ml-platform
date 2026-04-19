@@ -247,6 +247,75 @@ services:
       - recsys-network
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Redis (Cache & Rate Limiting)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.2
+    container_name: recsys-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # API Gateway
+  # ---------------------------------------------------------------------------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: recsys-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - USER_SERVICE_URL=http://user-service:8001
+      - EVENT_SERVICE_URL=http://event-service:8002
+    depends_on:
+      - redis
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # User Service
+  # ---------------------------------------------------------------------------
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: recsys-user-service
+    ports:
+      - "8001:8001"
+    environment:
+      - POSTGRES_URL=postgresql+asyncpg://airflow:airflow_password@postgres:5432/airflow
+    depends_on:
+      - postgres
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Event Service
+  # ---------------------------------------------------------------------------
+  event-service:
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
+    container_name: recsys-event-service
+    ports:
+      - "8002:8002"
+    environment:
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_TOPIC=user-events
+    depends_on:
+      - kafka
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
 # =============================================================================
 # Volumes
 # =============================================================================
