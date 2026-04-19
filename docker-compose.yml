@@ -358,6 +358,67 @@ services:
       - recsys-network
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Experimentation Service
+  # ---------------------------------------------------------------------------
+  experimentation-service:
+    build:
+      context: .
+      dockerfile: services/experimentation-service/Dockerfile
+    container_name: recsys-experimentation-service
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://recsys:recsys_pass@postgres:5432/recsys_db
+    depends_on:
+      - postgres
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  # =============================================================================
+  # Monitoring Stack
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: recsys-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: recsys-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: recsys-kafka-exporter
+    command: ["--kafka.server=kafka:9092"]
+    ports:
+      - "9308:9308"
+    depends_on:
+      - kafka
+    networks:
+      - recsys-network
+    restart: unless-stopped
+
 # =============================================================================
 # Volumes
 # =============================================================================

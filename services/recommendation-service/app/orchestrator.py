@@ -32,7 +32,7 @@ async def _get_experiment_group(user_id: str) -> Tuple[str, str]:
     """
     try:
         response = await http_client.get(
-            f"{settings.experimentation_service_url}/assign-group",
+            f"{settings.experimentation_service_url}/api/v1/experiments/assign",
             params={"user_id": user_id}
         )
         if response.status_code == 200:
