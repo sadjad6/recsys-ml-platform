@@ -1,0 +1,18 @@
+/* Clean modern look for Streamlit */
+
+.stButton > button {
+    width: 100%;
+    border-radius: 6px;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 1.8rem;
+}
+
+/* Make cards look a bit better */
+div[data-testid="column"] {
+    background-color: #1e1e1e;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
