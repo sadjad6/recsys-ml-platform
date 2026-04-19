@@ -1,0 +1,41 @@
+# RecSys ML Platform
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+data/
+
+# MLflow artifacts
+mlruns/
+mlartifacts/
+
+# Spark checkpoints
+checkpoints/
+
+# Feature store data
+feature_store/
+
+# Logs
+*.log
+logs/

@@ -1,0 +1,7 @@
+# =============================================================================
+# RecSys ML Platform — Kafka Tools Dependencies
+# =============================================================================
+# Pinned versions for reproducibility.
+
+kafka-python-ng==2.2.3
+pydantic>=2.6.0,<3.0.0
