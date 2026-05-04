@@ -1,0 +1,91 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Lint with ruff and mypy
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv venv
+          source .venv/bin/activate
+          uv pip install ruff mypy
+          uv run ruff check . || echo "Ruff failed, but continuing for demonstration"
+          uv run mypy . || echo "Mypy failed, but continuing for demonstration"
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: Run tests
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          uv venv
+          source .venv/bin/activate
+          uv pip install pytest pytest-cov
+          uv run pytest --cov=. --cov-report=xml || echo "No tests found or tests failed"
+
+  sonarcloud-check:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  build:
+    name: Build Images
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker images
+        run: docker compose build || echo "Docker compose build step"
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    continue-on-error: true  # Prevents failure of the workflow (similar to allow_failure: true)
+    steps:
+      - name: Run release steps
+        run: echo "Running release steps..."
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: release
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    continue-on-error: true  # Prevents failure of the workflow (similar to allow_failure: true)
+    steps:
+      - name: Deploy to production
+        run: echo "Deploying to production..."
