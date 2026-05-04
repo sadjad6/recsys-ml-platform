@@ -25,7 +25,8 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           uv venv
           source .venv/bin/activate
-          uv pip install ruff mypy
+          find . -name "requirements.txt" -exec uv pip install -r {} \; || true
+          uv pip install ruff mypy pytest httpx
           uv run ruff check . || echo "Ruff failed, but continuing for demonstration"
           uv run mypy . || echo "Mypy failed, but continuing for demonstration"
 
@@ -45,7 +46,9 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           uv venv
           source .venv/bin/activate
-          uv pip install pytest pytest-cov
+          find . -name "requirements.txt" -exec uv pip install -r {} \; || true
+          uv pip install pytest pytest-cov pytest-asyncio httpx
+          rm -f kafka/__init__.py # Prevent shadowing of the kafka-python pip package
           uv run pytest --cov=. --cov-report=xml || echo "No tests found or tests failed"
 
   sonarcloud-check:
