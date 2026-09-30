@@ -1,5 +1,9 @@
 # Recommendation ML Platform — Engineering Prototype
 
+![recsys-ml-platform project artwork](./docs/images/hero_banner.png)
+
+*Original architecture artwork. Several pictured integrations remain incomplete; production deployment and scale are not established.*
+
 A portfolio reference architecture with FastAPI services, Kafka event publishing, Spark streaming code, MLflow registry integration and Redis response caching. Individual components are implemented, but the full training-to-serving platform has not been verified as an integrated production deployment.
 
 ### Implementation status
