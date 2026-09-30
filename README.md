@@ -1,7 +1,5 @@
 # Recommendation ML Platform — Engineering Prototype
 
-![RecSys ML Platform Banner](docs/images/hero_banner.png)
-
 A portfolio reference architecture with FastAPI services, Kafka event publishing, Spark streaming code, MLflow registry integration and Redis response caching. Individual components are implemented, but the full training-to-serving platform has not been verified as an integrated production deployment.
 
 ### Implementation status
@@ -109,6 +107,6 @@ All microservices are built with FastAPI and expose Swagger UI documentation.
 *   **Model Service**: `http://localhost:8004/docs`
 *   **Experimentation Service**: `http://localhost:8005/docs`
 
-## 📸 Visuals
+## Project scope
 
-The banner is illustrative. No measured production traffic, operational scale or model performance is established by screenshots.
+No measured production traffic, operational scale or model performance is claimed.
